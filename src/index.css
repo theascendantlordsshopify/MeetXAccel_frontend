@@ -1,0 +1,187 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-neutral-50 text-neutral-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-monkai-600 text-white hover:bg-monkai-700 focus:ring-monkai-500 shadow-monkai;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus:ring-neutral-500 border border-neutral-300;
+  }
+  
+  .btn-accent {
+    @apply btn bg-accent-600 text-white hover:bg-accent-700 focus:ring-accent-500;
+  }
+  
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+  }
+  
+  .btn-ghost {
+    @apply btn text-neutral-700 hover:bg-neutral-100 focus:ring-neutral-500;
+  }
+  
+  .input {
+    @apply block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder-neutral-500 focus:border-monkai-500 focus:outline-none focus:ring-1 focus:ring-monkai-500 transition-colors duration-200;
+  }
+  
+  .input-error {
+    @apply border-danger-500 focus:border-danger-500 focus:ring-danger-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl border border-neutral-200 shadow-sm;
+  }
+  
+  .card-monkai {
+    @apply card shadow-monkai;
+  }
+  
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply badge bg-monkai-100 text-monkai-800;
+  }
+  
+  .badge-success {
+    @apply badge bg-accent-100 text-accent-800;
+  }
+  
+  .badge-warning {
+    @apply badge bg-warning-100 text-warning-800;
+  }
+  
+  .badge-danger {
+    @apply badge bg-danger-100 text-danger-800;
+  }
+  
+  .badge-neutral {
+    @apply badge bg-neutral-100 text-neutral-800;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400;
+}
+
+/* Loading animations */
+.skeleton {
+  @apply animate-pulse bg-neutral-200 rounded;
+}
+
+.fade-in {
+  @apply animate-fade-in;
+}
+
+.slide-up {
+  @apply animate-slide-up;
+}
+
+/* Form focus styles */
+.form-group {
+  @apply space-y-1;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-neutral-700;
+}
+
+.form-error {
+  @apply text-sm text-danger-600;
+}
+
+.form-help {
+  @apply text-sm text-neutral-500;
+}
+
+/* Table styles */
+.table {
+  @apply min-w-full divide-y divide-neutral-200;
+}
+
+.table-header {
+  @apply bg-neutral-50;
+}
+
+.table-header-cell {
+  @apply px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider;
+}
+
+.table-row {
+  @apply bg-white hover:bg-neutral-50 transition-colors duration-150;
+}
+
+.table-cell {
+  @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-900;
+}
+
+/* Status indicators */
+.status-dot {
+  @apply inline-block w-2 h-2 rounded-full mr-2;
+}
+
+.status-active {
+  @apply status-dot bg-accent-500;
+}
+
+.status-inactive {
+  @apply status-dot bg-neutral-400;
+}
+
+.status-error {
+  @apply status-dot bg-danger-500;
+}
+
+.status-warning {
+  @apply status-dot bg-warning-500;
+}
+
+/* Monkai specific elements */
+.monkai-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+}
+
+.monkai-text-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
