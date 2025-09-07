@@ -35,11 +35,15 @@ const profileSchema = z.object({
   timezone_name: z.string().min(1, 'Timezone is required'),
   language: z.string().min(1, 'Language is required'),
   brand_color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid color format'),
+  profile_picture: z.string().url().optional().or(z.literal('')),
+  brand_logo: z.string().url().optional().or(z.literal('')),
+  date_format: z.string().min(1, 'Date format is required'),
+  time_format: z.string().min(1, 'Time format is required'),
+  reasonable_hours_start: z.number().min(0).max(23),
+  reasonable_hours_end: z.number().min(1).max(24),
   public_profile: z.boolean(),
   show_phone: z.boolean(),
   show_email: z.boolean(),
-  reasonable_hours_start: z.number().min(0).max(23),
-  reasonable_hours_end: z.number().min(1).max(24),
 });
 
 const passwordSchema = z.object({
@@ -61,6 +65,10 @@ export const SettingsPage: React.FC = () => {
   const [showMFASetup, setShowMFASetup] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [mfaSetupData, setMfaSetupData] = useState<any>(null);
+  const [showBackupCodesModal, setShowBackupCodesModal] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [mfaDeviceType, setMfaDeviceType] = useState<'totp' | 'sms'>('totp');
+  const [smsPhoneNumber, setSmsPhoneNumber] = useState('');
 
   // Profile form
   const profileForm = useForm<ProfileFormData>({
@@ -155,11 +163,11 @@ export const SettingsPage: React.FC = () => {
       toast.success('MFA enabled successfully');
       setShowMFASetup(false);
       setMfaSetupData(null);
-      queryClient.invalidateQueries({ queryKey: ['mfa-devices'] });
-      // Show backup codes
       if (data.backup_codes) {
-        // TODO: Show backup codes modal
+        setBackupCodes(data.backup_codes);
+        setShowBackupCodesModal(true);
       }
+      queryClient.invalidateQueries({ queryKey: ['mfa-devices'] });
     },
     onError: () => {
       toast.error('Invalid verification code');
@@ -170,6 +178,10 @@ export const SettingsPage: React.FC = () => {
     mutationFn: mfaApi.disableMFA,
     onSuccess: () => {
       toast.success('MFA disabled successfully');
+      if (data.backup_codes) {
+        setBackupCodes(data.backup_codes);
+        setShowBackupCodesModal(true);
+      }
       queryClient.invalidateQueries({ queryKey: ['mfa-devices'] });
     },
     onError: () => {
@@ -183,6 +195,15 @@ export const SettingsPage: React.FC = () => {
 
   const onPasswordSubmit = (data: PasswordFormData) => {
     changePasswordMutation.mutate(data);
+  };
+
+  const copyBackupCodesToClipboard = () => {
+    const codesText = backupCodes.join('\n');
+    navigator.clipboard.writeText(codesText).then(() => {
+      toast.success('Backup codes copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy backup codes');
+    });
   };
 
   const tabs = [
@@ -276,6 +297,25 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="Profile Picture URL"
+                  type="url"
+                  {...profileForm.register('profile_picture')}
+                  error={profileForm.formState.errors.profile_picture?.message}
+                  placeholder="https://example.com/avatar.jpg"
+                  help="URL to your profile picture"
+                />
+                
+                <Input
+                  label="Brand Logo URL"
+                  type="url"
+                  {...profileForm.register('brand_logo')}
+                  error={profileForm.formState.errors.brand_logo?.message}
+                  placeholder="https://example.com/logo.png"
+                  help="URL to your brand logo"
+                />
+              </div>
               <div>
                 <label className="form-label">Bio</label>
                 <textarea
@@ -308,6 +348,53 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="form-label">Date Format</label>
+                  <select
+                    {...profileForm.register('date_format')}
+                    className="input"
+                  >
+                    <option value="MM/dd/yyyy">MM/dd/yyyy (US)</option>
+                    <option value="dd/MM/yyyy">dd/MM/yyyy (EU)</option>
+                    <option value="yyyy-MM-dd">yyyy-MM-dd (ISO)</option>
+                    <option value="MMM d, yyyy">MMM d, yyyy (Long)</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="form-label">Time Format</label>
+                  <select
+                    {...profileForm.register('time_format')}
+                    className="input"
+                  >
+                    <option value="hh:mm a">12-hour (hh:mm AM/PM)</option>
+                    <option value="HH:mm">24-hour (HH:mm)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="Reasonable Hours Start"
+                  type="number"
+                  min="0"
+                  max="23"
+                  {...profileForm.register('reasonable_hours_start', { valueAsNumber: true })}
+                  error={profileForm.formState.errors.reasonable_hours_start?.message}
+                  help="Hour when your workday typically starts (0-23)"
+                />
+                
+                <Input
+                  label="Reasonable Hours End"
+                  type="number"
+                  min="1"
+                  max="24"
+                  {...profileForm.register('reasonable_hours_end', { valueAsNumber: true })}
+                  error={profileForm.formState.errors.reasonable_hours_end?.message}
+                  help="Hour when your workday typically ends (1-24)"
+                />
+              </div>
               <div className="space-y-4">
                 <h3 className="text-md font-medium text-neutral-900">Privacy Settings</h3>
                 
@@ -445,9 +532,10 @@ export const SettingsPage: React.FC = () => {
                     onClick={() => {
                       const password = prompt('Enter your password to regenerate backup codes:');
                       if (password) {
-                        // TODO: Implement regenerate backup codes
+                        regenerateBackupCodesMutation.mutate(password);
                       }
                     }}
+                    loading={regenerateBackupCodesMutation.isPending}
                   >
                     Regenerate Backup Codes
                   </Button>
@@ -461,15 +549,69 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
                 
+                <div className="space-y-4">
+                  <div>
+                    <label className="form-label">Choose MFA Method</label>
+                    <div className="mt-2 space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="totp"
+                          checked={mfaDeviceType === 'totp'}
+                          onChange={(e) => setMfaDeviceType(e.target.value as 'totp' | 'sms')}
+                          className="text-monkai-600 focus:ring-monkai-500"
+                        />
+                        <span className="ml-2 text-sm text-neutral-700">
+                          Authenticator App (Google Authenticator, Authy, etc.)
+                        </span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="sms"
+                          checked={mfaDeviceType === 'sms'}
+                          onChange={(e) => setMfaDeviceType(e.target.value as 'totp' | 'sms')}
+                          className="text-monkai-600 focus:ring-monkai-500"
+                        />
+                        <span className="ml-2 text-sm text-neutral-700">
+                          SMS Text Message
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {mfaDeviceType === 'sms' && (
+                    <Input
+                      label="Phone Number"
+                      type="tel"
+                      value={smsPhoneNumber}
+                      onChange={(e) => setSmsPhoneNumber(e.target.value)}
+                      placeholder="+1234567890"
+                      help="Include country code (e.g., +1 for US)"
+                    />
+                  )}
+                </div>
+
                 <div className="flex space-x-3">
                   <Button
                     variant="primary"
                     onClick={() => {
-                      setupMFAMutation.mutate({
-                        device_type: 'totp',
-                        device_name: 'Authenticator App',
-                      });
+                      const setupData: any = {
+                        device_type: mfaDeviceType,
+                        device_name: mfaDeviceType === 'totp' ? 'Authenticator App' : 'SMS Device',
+                      };
+                      
+                      if (mfaDeviceType === 'sms') {
+                        if (!smsPhoneNumber) {
+                          toast.error('Please enter a phone number for SMS MFA');
+                          return;
+                        }
+                        setupData.phone_number = smsPhoneNumber;
+                      }
+                      
+                      setupMFAMutation.mutate(setupData);
                     }}
+                    loading={setupMFAMutation.isPending}
                   >
                     <ShieldCheckIcon className="h-4 w-4 mr-2" />
                     Enable MFA
@@ -689,41 +831,54 @@ export const SettingsPage: React.FC = () => {
       >
         {mfaSetupData && (
           <div className="space-y-6">
-            <div className="text-center">
-              <p className="text-sm text-neutral-600 mb-4">
-                Scan this QR code with your authenticator app:
-              </p>
-              {mfaSetupData.qr_code && (
-                <img
-                  src={mfaSetupData.qr_code}
-                  alt="MFA QR Code"
-                  className="mx-auto border border-neutral-200 rounded-lg"
-                />
-              )}
-            </div>
-            
-            <div>
-              <label className="form-label">Manual Entry Key</label>
-              <div className="flex">
-                <input
-                  type="text"
-                  value={mfaSetupData.manual_entry_key || ''}
-                  readOnly
-                  className="input flex-1 font-mono text-xs"
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="ml-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(mfaSetupData.manual_entry_key);
-                    toast.success('Copied to clipboard');
-                  }}
-                >
-                  Copy
-                </Button>
+            {mfaDeviceType === 'totp' ? (
+              <>
+                <div className="text-center">
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Scan this QR code with your authenticator app:
+                  </p>
+                  {mfaSetupData.qr_code && (
+                    <img
+                      src={mfaSetupData.qr_code}
+                      alt="MFA QR Code"
+                      className="mx-auto border border-neutral-200 rounded-lg"
+                    />
+                  )}
+                </div>
+                
+                <div>
+                  <label className="form-label">Manual Entry Key</label>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={mfaSetupData.manual_entry_key || ''}
+                      readOnly
+                      className="input flex-1 font-mono text-xs"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="ml-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(mfaSetupData.manual_entry_key);
+                        toast.success('Copied to clipboard');
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-sm text-neutral-600 mb-4">
+                  An SMS verification code has been sent to your phone number.
+                </p>
+                <p className="text-sm font-medium text-neutral-900">
+                  {mfaSetupData.phone_number}
+                </p>
               </div>
-            </div>
+            )}
             
             <form
               onSubmit={(e) => {
@@ -742,7 +897,10 @@ export const SettingsPage: React.FC = () => {
                 placeholder="Enter 6-digit code"
                 required
                 maxLength={6}
-                help="Enter the 6-digit code from your authenticator app"
+                help={mfaDeviceType === 'totp' 
+                  ? "Enter the 6-digit code from your authenticator app"
+                  : "Enter the 6-digit code sent to your phone"
+                }
               />
               
               <div className="flex justify-end space-x-3">
@@ -763,6 +921,48 @@ export const SettingsPage: React.FC = () => {
             </form>
           </div>
         )}
+      </Modal>
+
+      {/* Backup Codes Modal */}
+      <Modal
+        isOpen={showBackupCodesModal}
+        onClose={() => setShowBackupCodesModal(false)}
+        title="Your MFA Backup Codes"
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
+            <p className="text-sm text-warning-800">
+              <strong>Important:</strong> Save these backup codes in a secure location. 
+              Each code can only be used once and will allow you to access your account if you lose your MFA device.
+            </p>
+          </div>
+
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+              {backupCodes.map((code, index) => (
+                <div key={index} className="p-2 bg-white border border-neutral-200 rounded text-center">
+                  {code}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <Button
+              variant="secondary"
+              onClick={copyBackupCodesToClipboard}
+            >
+              Copy All Codes
+            </Button>
+            
+            <Button
+              variant="primary"
+              onClick={() => setShowBackupCodesModal(false)}
+            >
+              I've Saved These Codes
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -725,6 +725,16 @@ export const mfaApi = {
     const response = await api.post('/users/mfa/backup-codes/regenerate/', { password });
     return response.data;
   },
+  
+  sendSmsMfaCodeView: async (deviceId: string): Promise<ApiResponse<{ message: string }>> => {
+    const response = await api.post('/users/mfa/send-sms-code/', { device_id: deviceId });
+    return response.data;
+  },
+  
+  verifyMfaLogin: async (token: string, deviceId?: string): Promise<ApiResponse<{ message: string; token: string }>> => {
+    const response = await api.post('/users/mfa/verify-login/', { token, device_id: deviceId });
+    return response.data;
+  },
 };
 
 // Audit Logs API

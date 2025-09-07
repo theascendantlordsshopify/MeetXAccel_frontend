@@ -535,16 +535,18 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User;
   token: string;
+  mfa_required?: boolean;
+  mfa_devices?: MFADevice[];
 }
 
 export interface RegisterRequest {
   email: string;
-  username: string;
+  username?: string;
   first_name: string;
-  last_name: string;
+  last_name?: string;
   password: string;
   password_confirm: string;
-  terms_accepted: boolean;
+  terms_accepted?: boolean;
 }
 
 export interface ChangePasswordRequest {
